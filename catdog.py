@@ -59,9 +59,9 @@ def show_page():
                 st.write_stream(stream_data3)
                 st.markdown(text4)
 
-            else:
+            elif label == 0:
                 text4 = 'بر اساس ارزیابی من ، تصویر گربه رویت شد'
-                text5 = 'Based on my analysis, Dog was seen in this image'
+                text5 = 'Based on my analysis, Cat was seen in this image'
                 text6 = 'اطمینان من از دقت محاسبه'
                 text7 = (confidence)
                 def stream_data4():
