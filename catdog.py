@@ -1,66 +1,64 @@
 import streamlit as st
 import numpy as np
-import keras
-from tensorflow.keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
-from keras.models import Sequential, load_model
-from PIL import Image
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import img_to_array, load_img
+from tensorflow.keras.models import load_model
 import cv2
 import time
+from PIL import Image
 
-model = load_model('model.h5')
+st.set_page_config(page_title='تشخیص سگ از گربه - RoboAi', layout='centered', page_icon='🐶')
+
+model = load_model("cat_dog_model.h5")
 
 def show_page():
-    st.write("<h3 style='text-align: center; color: blue;'>تشخیص سگ از گربه 🐶</h3>", unsafe_allow_html=True)
+    st.write("<h4 style='text-align: center; color: blue;'>تشخیص سگ از گربه 🐶</h4>", unsafe_allow_html=True)
     st.write("<h6 style='text-align: center; color: black;'>Robo-Ai.ir طراحی و توسعه</h6>", unsafe_allow_html=True)
+    st.divider()
     st.link_button("Robo-Ai بازگشت به", "https://robo-ai.ir")
+
     container = st.container(border=True)
     container.write("<h6 style='text-align: right; color: gray;'>تشخیص تصویر سگ از گربه 🐱</h6>", unsafe_allow_html=True)
-    st.write('')
 
-    with st.sidebar:
-        st.write("<h5 style='text-align: center; color: blcak;'>تشخیص نژاد های مختلف سگ از گربه</h5>", unsafe_allow_html=True)
-        st.divider()
-        st.write("<h5 style='text-align: center; color: black;'>طراحی و توسعه</h5>", unsafe_allow_html=True)
-        st.write("<h5 style='text-align: center; color: gray;'>حمیدرضا بهرامی</h5>", unsafe_allow_html=True)
-
-    image = st.file_uploader('آپلود تصویر', type=['jpg', 'jpeg'])
-    button = st.button('ارزیابی تصویر')       
-    if image is not None:
-        file_bytes = np.array(bytearray(image.read()), dtype= np.uint8)
+    image = st.file_uploader('آپلود تصویر', type=['jpg', 'jpeg', 'png'])
+    
+    if image:
+        file_bytes = np.array(bytearray(image.read()), dtype=np.uint8)
         img = cv2.imdecode(file_bytes, 1)
-        st.image(img, channels= 'BGR', use_container_width= True)
-        if button: 
-            x = cv2.resize(img, (128, 128))
-            x1 = img_to_array(x)
-            x1 = x1.reshape((1,) + x1.shape)
-            y_pred = model.predict(x1)
+        st.image(img, channels='BGR', use_container_width=True)
 
-            if y_pred == 1:
-                text1 = '✦ بر اساس ارزیابی من ، تصویر سگ رویت شد'
-                text2 = '✦ Based on my analysis, Dog was seen in this image'
-                def stream_data1():
-                    for word in text1.split(" "):
-                        yield word + " "
-                        time.sleep(0.09)
-                st.write_stream(stream_data1)
-                def stream_data2():
-                    for word in text2.split(" "):
-                        yield word + " "
-                        time.sleep(0.09)
-                st.write_stream(stream_data2)
+        if st.button('🔍 ارزیابی تصویر'): 
+            label, confidence = predict_image(img)
+            display_result(label, confidence)
 
-            elif y_pred == 0:
-                text4 = '✦ بر اساس ارزیابی من ، تصویر گربه رویت شد'
-                text5 = '✦ Based on my analysis, Cat was seen in this image'
-                def stream_data4():
-                    for word in text4.split(" "):
-                        yield word + " "
-                        time.sleep(0.09)
-                st.write_stream(stream_data4)
-                def stream_data5():
-                    for word in text5.split(" "):
-                        yield word + " "
-                        time.sleep(0.09)
-                st.write_stream(stream_data5)
+def predict_image(img):
+    img_resized = cv2.resize(img, (128, 128)) 
+    img_array = img_to_array(img_resized) / 255.0
+    img_array = np.expand_dims(img_array, axis=0)  
+
+    prediction = model.predict(img_array)[0][0]  
+    label = "Dog" if prediction > 0.5 else "Cat"
+    confidence = round(max(prediction, 1 - prediction) * 100, 2)
+    
+    return label, confidence
+
+def display_result(label, confidence):
+    if label == "Dog":
+        text1 = "✦ بر اساس ارزیابی من ، تصویر سگ رویت شد"
+        text2 = "✦ اطمینان من از دقت محاسبه"
+
+    else:
+        text1 = "✦ بر اساس ارزیابی من ، تصویر گربه رویت شد"
+        text2 = "✦ اطمینان من از دقت محاسبه"
+
+    def stream_text(text):
+        for word in text.split(" "):
+            yield word + " "
+            time.sleep(0.09)
+    
+    st.write_stream(stream_text(text1))
+    st.write_stream(stream_text(text2))
+    st.write(f"**{confidence}%**")
+
 
 show_page()
